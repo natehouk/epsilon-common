@@ -1,4 +1,5 @@
 // epsilon-common tests: preset round trip, undo/redo and A/B, halfband filters, FFT, typed characters.
+#include "../common/Convolver.hpp"
 #include "../common/Fft.hpp"
 #include "../common/Halfband.hpp"
 #include "../common/Platform.hpp"
@@ -125,12 +126,31 @@ static void testFft() {
     CHECK(std::fabs(x[3].real() - (float)std::cos(2 * M_PI * 15 / 64.0)) < 1e-4f, "inverse");
 }
 
+static void testConvolver() {
+    // partitioned convolution equals direct convolution sample for sample; kernel swaps cross-fade
+    const int B = 64, L = 300;
+    std::vector<float> h(L), x(4096), ref(4096, 0.f), out(4096, 0.f);
+    unsigned r = 1; auto rnd = [&]() { r = r * 1664525u + 1013904223u; return ((r >> 9) & 0xffff) / 32768.f - 1.f; };
+    for (float& v : h) v = rnd() * 0.3f;
+    for (float& v : x) v = rnd();
+    for (int n = 0; n < 4096; ++n) for (int k = 0; k < L && k <= n; ++k) ref[n] += h[k] * x[n - k];
+    Convolver c; c.init(B, 512); c.setKernel(h.data(), L);
+    for (int b = 0; b < 4096 / B; ++b) c.process(x.data() + b * B, out.data() + b * B);
+    float worst = 0; for (int n = 0; n < 4096; ++n) worst = std::max(worst, std::fabs(out[n] - ref[n]));
+    CHECK(worst < 1e-3f, "convolver error %g", worst);
+    // swap to a pure delay of 5 samples: after the cross-fade block, out = x delayed by 5
+    std::vector<float> d(8, 0.f); d[5] = 1.f; c.setKernel(d.data(), 8);
+    std::vector<float> o2(4 * B); for (int b = 0; b < 4; ++b) c.process(x.data() + b * B, o2.data() + b * B);
+    float w2 = 0; for (int n = 2 * B; n < 4 * B; ++n) w2 = std::max(w2, std::fabs(o2[n] - x[n - 5]));
+    CHECK(w2 < 1e-4f, "kernel swap %g", w2);
+}
+
 static void testTyped() {
     CHECK(typedChar('a', true) == 'A' && typedChar('a', false) == 'a' && typedChar('1', true) == '!' && typedChar(13, false) == 0, "typedChar");
 }
 
 int main() {
-    testPresets(); testUndo(); testHalfband(); testFft(); testTyped();
+    testPresets(); testUndo(); testHalfband(); testFft(); testConvolver(); testTyped();
     std::printf(fails ? "%d FAILED\n" : "all tests passed\n", fails);
     return fails ? 1 : 0;
 }

@@ -8,6 +8,9 @@ Plugins don't depend on this repo when they build. Each plugin keeps a **vendore
 
 | Header | What it does | Depends on |
 |---|---|---|
+| `EqBand.hpp` | EQ band engine v2: bell, low and high shelf, low and high cut, notch, band pass, tilt shelf, flat tilt and all pass shapes. Slopes run from 6 to 96 dB/oct in 6 dB steps, plus a brickwall. Each band is described as analog sections, which give both the exact analog response and a zero-latency TPT state-variable cascade | — |
+| `Convolver.hpp` | Uniformly partitioned FFT convolution that cross-fades between kernels | `Fft.hpp` |
+| `CurveFit.hpp` | Fits bells and shelves to a target curve: greedy placement, then Levenberg-Marquardt. Used by EQ Sketch and EQ Match | `EqBand.hpp` |
 | `Fft.hpp` | Radix-2 complex FFT for analyzers and FFT convolution | — |
 | `Halfband.hpp` | 2x/4x oversampling with linear-phase halfband filters. `Oversampler::latency(os)` gives the latency in base-rate samples | — |
 | `Platform.hpp` | `openURL`, `nowSec`, and `typedChar`, which applies Shift to DPF key events | Windows: link `-lshell32` |
@@ -47,10 +50,11 @@ To change shared code, edit it **here**, run the tests, commit, then sync it int
 
 ```sh
 c++ -std=c++17 -O2 -Wall -Wextra -o test_common tests/test_common.cpp && ./test_common
+c++ -std=c++17 -O2 -Wall -Wextra -o test_eq tests/test_eq.cpp && ./test_eq
 ```
 
 CI covers the following:
-- Runs the unit tests on Linux and macOS: a preset round trip, undo/redo and A/B, halfband passband, stopband and latency, the FFT, and typed characters.
+- Runs the unit tests on Linux and macOS: a preset round trip, undo/redo and A/B, halfband passband, stopband and latency, the FFT, the convolver, typed characters, and the EQ engine. The EQ tests check that every shape and slope meets its specification and matches Mica 1.x, that the digital filters track the analog response, and that curve fitting works.
 - Compiles `UiKit.hpp` against the current DPF.
 - Builds the framework-free headers for Windows with MinGW.
 - Exercises `sync.sh`.
