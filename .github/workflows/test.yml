@@ -1,0 +1,29 @@
+name: test
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit tests
+        run: c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_common tests/test_common.cpp && ./test_common
+      - name: Fetch DPF
+        run: git clone --depth 1 --recursive https://github.com/DISTRHO/DPF.git dpf
+      - name: UI kit compiles against DPF
+        run: c++ -std=c++17 -fsyntax-only -Wall -Wextra -Werror -Itests/ui -Idpf/distrho -Idpf/dgl -DDGL_OPENGL -DHAVE_OPENGL tests/ui/ui_check.cpp
+      - name: sync.sh
+        run: |
+          mkdir -p /tmp/fake/plugins/Demo && git -C /tmp/fake init -q
+          tools/sync.sh /tmp/fake
+          test -f /tmp/fake/plugins/Demo/common/UiKit.hpp && cat /tmp/fake/plugins/Demo/common/VERSION
+  windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y g++-mingw-w64-x86-64
+      - name: Headers build for Windows (MinGW)
+        run: x86_64-w64-mingw32-g++ -std=c++17 -O2 -Wall -Wextra -Werror -static -o headers.exe tests/headers_win.cpp -lshell32
