@@ -7,6 +7,7 @@
 #include "Halfband.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 
 namespace epsilon {

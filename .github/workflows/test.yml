@@ -13,6 +13,10 @@ jobs:
         run: |
           set -o pipefail
           { c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_common tests/test_common.cpp && ./test_common && c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_eq tests/test_eq.cpp && ./test_eq && c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_dsp tests/test_dsp.cpp && ./test_dsp; } 2>&1 | tee out.txt || { sed 's/^/::error::/' out.txt | head -20; exit 1; }
+      - name: Each DSP header compiles on its own
+        run: |
+          echo 'int main() {}' > empty.cpp
+          for f in common/*.hpp; do [ "$f" = common/UiKit.hpp ] && continue; c++ -std=c++11 -fsyntax-only -Wall -Wextra -Werror -include "$PWD/$f" empty.cpp || { echo "::error::$f is not self-contained"; exit 1; }; done
       - name: OpenGL headers (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev
