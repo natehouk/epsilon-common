@@ -6,6 +6,7 @@
 #include "../common/EqBand.hpp"
 #include "../common/Fft.hpp"
 #include "../common/Halfband.hpp"
+#include "../common/ModSystem.hpp"
 #include "../common/Platform.hpp"
 #include "../common/UndoHistory.hpp"
 #include "../common/UserPresets.hpp"

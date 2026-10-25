@@ -17,6 +17,7 @@ Plugins don't depend on this repo when they build. Each plugin keeps a **vendore
 | `Loudness.hpp` | ITU-R BS.1770-4 / EBU R128 loudness meter: K-weighting at any rate; momentary, short-term and gated integrated loudness; loudness range; 4x true peak. Checked against EBU Tech 3341 and 3342 cases | `Halfband.hpp` |
 | `Fft.hpp` | Radix-2 complex FFT for analyzers and FFT convolution | — |
 | `Halfband.hpp` | Linear-phase halfband oversampling. `Oversampler` covers 2x and 4x; `OversamplerN` chains stages up to 32x. Latency is given in base-rate samples | — |
+| `ModSystem.hpp` | Modulation system v2: four XLFOs (seven waves or a 16-step sequencer, free or tempo-synced), two ADSR envelope generators (MIDI- or audio-triggered), two envelope followers (input or sidechain), two XY pads and five MIDI sources, and a slot matrix where a slot can modulate another slot's amount. The plugin chooses where the parameters live (`Layout`) and what the destinations are | — |
 | `Platform.hpp` | `openURL`, `nowSec`, and `typedChar`, which applies Shift to DPF key events | Windows: link `-lshell32` |
 | `UserPresets.hpp` | `PresetStore`: user preset files (plain `symbol=value` text) in the standard folder for each OS. Saving, listing, loading and deleting them, with names cleaned up for the file system | — |
 | `UndoHistory.hpp` | Undo and redo (200 steps), plus A/B with copy. Edits are recorded as gestures | — |
@@ -56,6 +57,7 @@ To change shared code, edit it **here**, run the tests, commit, then sync it int
 c++ -std=c++17 -O2 -Wall -Wextra -o test_common tests/test_common.cpp && ./test_common
 c++ -std=c++17 -O2 -Wall -Wextra -o test_eq tests/test_eq.cpp && ./test_eq
 c++ -std=c++17 -O2 -Wall -Wextra -o test_dsp tests/test_dsp.cpp && ./test_dsp
+c++ -std=c++17 -O2 -Wall -Wextra -o test_mod tests/test_mod.cpp && ./test_mod
 ```
 
 CI covers the following:

@@ -12,7 +12,7 @@ jobs:
       - name: Unit tests
         run: |
           set -o pipefail
-          { c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_common tests/test_common.cpp && ./test_common && c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_eq tests/test_eq.cpp && ./test_eq && c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_dsp tests/test_dsp.cpp && ./test_dsp; } 2>&1 | tee out.txt || { sed 's/^/::error::/' out.txt | head -20; exit 1; }
+          { c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_common tests/test_common.cpp && ./test_common && c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_eq tests/test_eq.cpp && ./test_eq && c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_dsp tests/test_dsp.cpp && ./test_dsp && c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_mod tests/test_mod.cpp && ./test_mod; } 2>&1 | tee out.txt || { sed 's/^/::error::/' out.txt | head -20; exit 1; }
       - name: Each DSP header compiles on its own
         run: |
           echo 'int main() {}' > empty.cpp
