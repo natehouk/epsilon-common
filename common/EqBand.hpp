@@ -160,12 +160,18 @@ struct Cascade {
 
     Cascade() { std::memset(this, 0, sizeof *this); }
     void reset() { std::memset(ic1, 0, sizeof ic1); std::memset(ic2, 0, sizeof ic2); }
-    // set from a design; sections above 0.49 fs are clamped (the analog response cannot be reached there)
-    void set(const Design& d, float fs) {
+    // Pre-warp: warpHz > 0 maps every section through one bilinear transform tuned at warpHz (the band's
+    // frequency, clamped to 0.49 fs), which keeps the band's shape intact and matches Mica 1.x; warpHz = 0
+    // tunes each section at its own frequency (clamped to 0.49 fs), which suits spread-out designs (flat tilt).
+    static float warpG(const Section& s, float fs, float warpHz) {
+        if (warpHz > 0.f) return std::tan(kPi * std::min(warpHz, 0.49f * fs) / fs) * (s.fc / warpHz);
+        return std::tan(kPi * std::min(s.fc, 0.49f * fs) / fs);
+    }
+    void set(const Design& d, float fs, float warpHz = 0.f) {
         const int was = n; n = d.n;
         for (int i = 0; i < n; ++i) {
             const Section& s = d.s[i];
-            const float g = std::tan(kPi * std::min(s.fc, 0.49f * fs) / fs);
+            const float g = warpG(s, fs, warpHz);
             order[i] = s.order;
             if (s.order == 2) {
                 a1[i] = 1.f / (1.f + g * (g + s.k)); a2[i] = g * a1[i]; a3[i] = g * a2[i];
@@ -197,13 +203,13 @@ struct Cascade {
         return true;
     }
     // the digital response this cascade actually has (bilinear transform of each section)
-    static cpx digitalResponse(const Design& d, float fs, float hz) {
+    static cpx digitalResponse(const Design& d, float fs, float hz, float warpHz = 0.f) {
         cpx h(1.f, 0.f);
         const float w = 2.f * kPi * hz / fs;
         const cpx z1 = std::polar(1.f, -w);
         for (int i = 0; i < d.n; ++i) {
             const Section& s = d.s[i];
-            const float g = std::tan(kPi * std::min(s.fc, 0.49f * fs) / fs);
+            const float g = warpG(s, fs, warpHz);
             const cpx sn = (1.f - z1) / ((1.f + z1) * g);                 // s / wc through the pre-warped bilinear transform
             if (s.order == 1) h *= (s.b1 * sn + s.b0) / (sn + 1.f);
             else h *= (s.b2 * sn * sn + s.b1 * sn + s.b0) / (sn * sn + s.k * sn + 1.f);
