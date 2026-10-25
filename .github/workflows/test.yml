@@ -8,7 +8,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Unit tests
         run: |
           set -o pipefail
@@ -30,7 +30,7 @@ jobs:
   windows:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: sudo apt-get update && sudo apt-get install -y g++-mingw-w64-x86-64
       - name: Headers build for Windows (MinGW)
         run: x86_64-w64-mingw32-g++ -std=c++17 -O2 -Wall -Wextra -Werror -static -o headers.exe tests/headers_win.cpp -lshell32

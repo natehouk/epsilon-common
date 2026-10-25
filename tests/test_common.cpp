@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
+#include <unistd.h>
 
 using namespace epsilon;
 static int fails = 0;
