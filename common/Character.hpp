@@ -16,11 +16,13 @@ class Character {
 public:
     enum Mode { kOff, kWarm, kPunchy, kVintage, kNumModes };
 
-    void setup(float sampleRate, int mode, float drive01) {
-        fs = sampleRate; m = mode; drive = std::min(1.f, std::max(0.f, drive01));
+    // sampleRate: the rate process() runs at (an oversampled rate, if oversampling); tickRate: the rate tick() is
+    // called at (0 = the same)
+    void setup(float sampleRate, int mode, float drive01, float tickRate = 0.f) {
+        fs = sampleRate; m = mode; drive = std::min(1.f, std::max(0.f, drive01)); tickFs = tickRate > 0.f ? tickRate : sampleRate;
         pre = std::pow(10.f, (2.f + 22.f * drive) / 20.f);           // +2 .. +24 dB into the shaper
         dcCoef = 1.f - std::exp(-2.f * 3.14159265f * 8.f / fs);
-        driftCoef = 1.f - std::exp(-2.f * 3.14159265f * 0.15f / fs);
+        driftCoef = 1.f - std::exp(-2.f * 3.14159265f * 0.15f / tickFs);
         if (m == kVintage && (toneFs != fs)) {
             toneFs = fs;
             eq::Spec lo; lo.shape = eq::kLowShelf; lo.freq = 110.f; lo.gainDb = 0.8f; lo.slopeDb = 12; lo.q = 0.6f;
@@ -36,7 +38,7 @@ public:
     // advance the drift generator once per sample (call even when the shaper isn't used)
     inline void tick() {
         for (int c = 0; c < 2; ++c) {
-            if (++dCount[c] >= (int)(fs * 0.25f)) { dCount[c] = 0; noise = noise * 1664525u + 1013904223u; dTarget[c] = ((noise >> 8) & 0xffff) / 32768.f - 1.f; }
+            if (++dCount[c] >= (int)(tickFs * 0.25f)) { dCount[c] = 0; noise = noise * 1664525u + 1013904223u; dTarget[c] = ((noise >> 8) & 0xffff) / 32768.f - 1.f; }
             drift_[c] += (dTarget[c] - drift_[c]) * driftCoef;
         }
     }
@@ -62,7 +64,7 @@ public:
     }
 
 private:
-    float fs = 48000.f, toneFs = 0.f, drive = 0.f, pre = 1.f, dcCoef = 0.001f, driftCoef = 0.0001f;
+    float fs = 48000.f, tickFs = 48000.f, toneFs = 0.f, drive = 0.f, pre = 1.f, dcCoef = 0.001f, driftCoef = 0.0001f;
     int m = kOff;
     eq::Cascade<2> tone;
     float dc[2] = { 0, 0 }, drift_[2] = { 0, 0 }, dTarget[2] = { 0, 0 };
