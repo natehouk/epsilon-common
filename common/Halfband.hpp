@@ -46,7 +46,6 @@ struct HbDown {
         return s;
     }
 };
-// 1x, 2x or 4x; latency in base-rate samples 0 / 32 / 48 (half of it in the up-sampler)
 // factor 1, 2 or 4; latency in base-rate samples 0 / 32 / 48 (half of it in the up-sampler)
 struct Oversampler {
     HbUp u1, u2; HbDown d1, d2;
@@ -64,6 +63,40 @@ struct Oversampler {
         if (os == 2) return d1.process(y[0], y[1]);
         const float a = d2.process(y[0], y[1]), b = d2.process(y[2], y[3]);
         return d1.process(a, b);
+    }
+};
+
+// any power of two from 1x to 32x, as a chain of halfband stages. Latency in base-rate samples (up + down):
+// 0, 32, 48, 56, 60, 62 for 1x .. 32x (half of it in the up-sampler). Factors up to 4x give exactly the same
+// output as Oversampler.
+struct OversamplerN {
+    static constexpr int kMaxStages = 5, kMax = 1 << kMaxStages;
+    HbUp u[kMaxStages]; HbDown d[kMaxStages];
+    float a[kMax], b[kMax];
+    void reset() { for (int i = 0; i < kMaxStages; ++i) { u[i].reset(); d[i].reset(); } }
+    static int stages(int os) { int s = 0; while ((1 << s) < os && s < kMaxStages) ++s; return s; }
+    static int latency(int os) { int l = 0, add = 32; for (int i = 0; i < stages(os); ++i) { l += add; add /= 2; } return l; }
+    static int upLatency(int os) { return latency(os) / 2; }
+    // y receives os samples
+    inline void up(float x, int os, float* y) {
+        const int s = stages(os);
+        if (s == 0) { y[0] = x; return; }
+        float* src = a; float* dst = b; src[0] = x; int n = 1;
+        for (int st = 0; st < s; ++st) {
+            float* out = st == s - 1 ? y : dst;
+            for (int k = 0; k < n; ++k) u[st].process(src[k], out[2 * k], out[2 * k + 1]);
+            n *= 2; if (st < s - 1) { float* t = src; src = dst; dst = t; }
+        }
+    }
+    inline float down(const float* y, int os) {
+        const int s = stages(os);
+        if (s == 0) return y[0];
+        int n = 1 << s; const float* src = y; float* dst = a;
+        for (int st = s - 1; st >= 0; --st) {
+            for (int k = 0; k < n / 2; ++k) dst[k] = d[st].process(src[2 * k], src[2 * k + 1]);
+            n /= 2; src = dst; dst = dst == a ? b : a;
+        }
+        return src[0];
     }
 };
 
