@@ -10,11 +10,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Unit tests
-        run: c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_common tests/test_common.cpp && ./test_common
+        run: |
+          set -o pipefail
+          { c++ -std=c++17 -O2 -Wall -Wextra -Werror -o test_common tests/test_common.cpp && ./test_common; } 2>&1 | tee out.txt || { sed 's/^/::error::/' out.txt | head -20; exit 1; }
+      - name: OpenGL headers (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev
       - name: Fetch DPF
         run: git clone --depth 1 --recursive https://github.com/DISTRHO/DPF.git dpf
       - name: UI kit compiles against DPF
-        run: c++ -std=c++17 -fsyntax-only -Wall -Wextra -Werror -Itests/ui -Idpf/distrho -Idpf/dgl -DDGL_OPENGL -DHAVE_OPENGL tests/ui/ui_check.cpp
+        run: |
+          set -o pipefail
+          c++ -std=c++17 -fsyntax-only -Wall -Wextra -Werror -Itests/ui -Idpf/distrho -Idpf/dgl -DDGL_OPENGL -DHAVE_OPENGL tests/ui/ui_check.cpp 2>&1 | tee out.txt || { grep -m20 -E 'error|warning' out.txt | sed 's/^/::error::/'; exit 1; }
       - name: sync.sh
         run: |
           mkdir -p /tmp/fake/plugins/Demo && git -C /tmp/fake init -q
