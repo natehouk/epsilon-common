@@ -89,6 +89,24 @@ public:
 
     bool remove(const std::string& name) const { return std::remove(path(name).c_str()) == 0; }
 
+    // favourites: favourites.txt in the preset folder, one key per line ("f:<factory name>" or "u:<user preset name>")
+    std::vector<std::string> favourites() const {
+        std::vector<std::string> v; FILE* f = std::fopen((dir() + "/favourites.txt").c_str(), "rb");
+        if (!f) return v;
+        char line[256];
+        while (std::fgets(line, sizeof line, f)) {
+            std::string s(line); while (!s.empty() && (s.back() == '\n' || s.back() == '\r')) s.pop_back();
+            if (s.size() > 2) v.push_back(s);
+        }
+        std::fclose(f); return v;
+    }
+    bool setFavourites(const std::vector<std::string>& v) const {
+        makeDirs(dir());
+        FILE* f = std::fopen((dir() + "/favourites.txt").c_str(), "wb"); if (!f) return false;
+        for (const std::string& s : v) std::fprintf(f, "%s\n", s.c_str());
+        return std::fclose(f) == 0;
+    }
+
     // file-system-safe name: no path separators or reserved characters, trimmed, at most 48 characters
     static std::string sanitize(const std::string& in) {
         std::string s;

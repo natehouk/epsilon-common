@@ -39,6 +39,10 @@ static void testPresets() {
     CHECK(store.remove("alpha") && store.list().size() == 2, "remove");
     CHECK(PresetStore::sanitize("  ..x:y*z.  ") == "..xyz", "sanitize '%s'", PresetStore::sanitize("  ..x:y*z.  ").c_str());
     CHECK(!store.save("   ", params, 4, v), "empty name refused");
+    CHECK(store.favourites().empty(), "no favourites yet");
+    CHECK(store.setFavourites({ "f:Init", "u:My Preset1" }), "save favourites");
+    { const std::vector<std::string> fv = store.favourites(); CHECK(fv.size() == 2 && fv[0] == "f:Init" && fv[1] == "u:My Preset1", "favourites round trip"); }
+    CHECK(store.setFavourites({}) && store.favourites().empty(), "clear favourites");
 }
 
 static void testUndo() {
